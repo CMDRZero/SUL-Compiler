@@ -1,4 +1,4 @@
-def isint(s):
+def isint(s):#Return if s is a int or float
     if s[0]==".":
         s=s[1:]
     elif '.' in s:
@@ -430,7 +430,7 @@ with open("code.c","w") as f:#Output file
     fwrite("\nint called;\n")#Initialize the execution checker
     fwrite("for(unsigned long RTCT=1; 1; RTCT++){\n")#Main loop
     scp+=1
-	fwrite("called=0;\n")#No functions have been called yet
+    fwrite("called=0;\n")#No functions have been called yet
     LN=-1
     for line in lines:#Iterate over everyline
         LN+=1#Do some basic variable setting
@@ -474,7 +474,7 @@ with open("code.c","w") as f:#Output file
                 for c,var in vars:
                     if smtIn(var,cond):#Check over every variable in the file, if its in this command, add it to a list of variables to await
                         vaw.append(var)
-                for i in range(len(cond)):#Check for unperma called integers, and note that, else remove the ! - This might be bugged
+                for i in range(len(cond)):#Check for unperma called integers, and note that, else remove the !
                     if cond[i]in"0123456789" and cond[i-1]!="!":
                         ro=1
                     elif cond[i]in"0123456789" and cond[i-1]=="!":
@@ -486,6 +486,7 @@ with open("code.c","w") as f:#Output file
         for var in vaw:
             reqs.append("CT"+str(var)+">LCT["+str(LN)+"] && CT"+str(var)+"<RTCT")
         fwrite("if("+" && ".join(reqs)+"){\n")#Write the if statement
+        fwrite("called=1;\n")#Write termination stopping line
         scp+=1
         if ";" in line:#Turn the code in front into either many lines delimited by ; or just one
             slines=line.split(";")
@@ -576,6 +577,12 @@ with open("code.c","w") as f:#Output file
         
     #print(vars)
     scp-=1
+    fwrite("}\n")
+    scp-=1
+    fwrite("if(!called){\n")
+    scp+=1
+    #fwrite('printf("inters: %d\n",(RTCT));\n')
+    fwrite("return 0;\n")
     fwrite("}\n")
     scp-=1
     fwrite("}\n")
