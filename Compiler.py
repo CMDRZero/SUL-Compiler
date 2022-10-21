@@ -367,6 +367,32 @@ def scopecompile(txt,params,name,out,level=0):#Compile the code at a given scope
             txt=txt.replace(line.replace(rep,val)+"\n","")#Delete the replacement line afterwards
             #print(rep,val)
     #Find Function defs here, and remove them
+    f=0
+    sl=[]
+    fname=""
+    for line in txt.split("\n"): #This checks for func defs (>>) lines
+        if f==0:
+            if ">>" in line:
+                f=1
+                f,val=line.split(">>")
+                val=val[:-1]
+                i=0
+                par=""
+                fname=""
+                while sline[i]!="(":
+                    fname+=sline[i]
+                    i+=1
+                i+=1
+                while sline[i] !=')':
+                    par+=sline[i]
+                    i+=1
+        else:
+            if line!="}":
+                sl.append(line)
+            else:
+                scopecompile("\n".join(sl),par,fname,val,level=1)
+                sl=[]
+                f=0
     lines=txt.split("\n")
     L=len(lines)
     fwrite("unsigned long LCT["+str(L)+"];\nmemset(LCT,0,"+str(L)+"*sizeof(unsigned long));\n")#Initalize the Call time array
@@ -567,215 +593,10 @@ oval="sfiub"
 dtypes={"i":"int","u":"unsigned int","f":"float","b":"int","c":"char","Ev":"Eval","v":"void"}#to implement: string, ptr
 ctypes={"i":"d","u":"i","f":"f","c":"c"}
 
-##Debugging code
-#a=cparse("(!1<<1)*b(~3)>0")
-#ta=tparse(a)
-#syn=makesyntaxtree(ta)
-#print(a)
-#print(ta)
-#print(dparse(ta))
-#print(cparse("(1+2)*(3+4)"))
-#error
-
 with open("code.sul","r") as f:#If you want to use a different file, change this file name
     txt=f.read()
-#print(txt)
 scp=0
 with open("code.c","w") as f:#Output file
     fwrite("#include <stdio.h>\n#include <string.h>\n\n")#Write simple c imports and base code
-    #fwrite("int main(void) {\n")
     scopecompile(txt,"void","main","i",level=0)
-    f.close()
-    scp+=1#These mean add indentation
-    for line in txt.split("\n"): #This checks for replacement (::) lines
-        if "::" in line:
-            rep,val=line.split("::")
-            txt=txt.replace(rep,val)
-            txt=txt.replace(line.replace(rep,val)+"\n","")#Delete the replacement line afterwards
-            #print(rep,val)
-    lines=txt.split("\n")
-    L=len(lines)
-    fwrite("unsigned long LCT["+str(L)+"];\nmemset(LCT,0,"+str(L)+"*sizeof(unsigned long));\n")#Initalize the Call time array
-    vars=[]
-    for line in lines:#Iterate over every line
-        co=""
-        sus=0
-        q=False
-        t=0
-        for i in range(len(line)):#Kinda forgot what this does, but it checks if any defines a variable output via : << and <>
-            if line[i]==":" and not q:
-                vars.append((co[0],co))
-                sus=1
-            elif line[i:i+2]=="<<" and not q:
-                vars.append((co[0],co))
-                sus=1
-            elif line[i]==";" and not q:
-                co=""
-                sus=0
-            elif line[i:i+2]=="<>":
-                t=1
-            elif not sus:
-                if not(co=="" and t and line[i] not in alfnum):#Idk what this does, it was 12am ok, i was tired
-                    co+=line[i]
-                    if t and line[i] not in alfnum:
-                        vars.append((co[0],co[:-1]))
-                        sus=1
-                        t=0
-            if line[i]=='"':
-                q=not q
-    uvars=[]#Make a version of all of the variables (vars) and filter out duplicates
-    for c,var in vars:
-        if (c,var) not in uvars:
-            uvars.append((c,var))
-    vars=uvars
-    for c,var in vars:
-        fwrite(dtypes[c]+" "+var+"; ")#Initialize each variable
-    fwrite("\n")
-    for c,var in vars:
-        fwrite("int CT"+var+" = -1; ")#Initialize each varaible's call time
-    fwrite("\nint called;\n")#Initialize the execution checker
-    fwrite("for(unsigned long RTCT=1; 1; RTCT++){\n")#Main loop
-    scp+=1
-    fwrite("called=0;\n")#No functions have been called yet
-    LN=-1
-    for line in lines:#Iterate over everyline
-        LN+=1#Do some basic variable setting
-        reqs=[]
-        rests=[]
-        q=0
-        r=0
-        b=""
-        for i in range(len(line)):#Check for suspension (?) and await-if (@) commands
-            if line[i] in "@?":
-                r=1
-                t=line[i]
-            elif r:
-                if line[i]=="[":
-                    q=1
-                    b=""
-                elif line[i]=="]":
-                    q=0
-                    rests.append((t,b))#Add each condition and its type to a list of restrictions
-                elif q==0:
-                    r=0
-            if q and line[i] not in "[]":
-                b+=line[i]
-        ro=0
-        vin=[]
-        vaw=[]
-        for t,cond in rests:
-            if t=="@":#Handling of await-if commands
-                for c,var in vars:
-                    if smtIn(var,cond):#Check over every variable in the file, if its in this command, add it to a list of variables to await
-                        vaw.append(var)
-                sub=0
-                for i in range(len(cond)):#Check for unperma called integers, and note that, else remove the !
-                    if cond[i-sub]in"0123456789" and cond[i-1-sub]!="!" and cond[i-1-sub]not in"0123456789":
-                        ro=1
-                    elif cond[i-sub]in"0123456789" and cond[i-1-sub]=="!" and cond[i-1-sub]not in"0123456789":
-                        cond=cond[:i-1-sub]+cond[i-sub:]
-                        sub+=1
-                reqs.append(cond)
-            elif t=="?":#Handling of suspend commands
-                for c,var in vars:
-                    if smtIn(var,cond):#Check over every variable in the file, if its in this command, add it to a list of variables to await
-                        vaw.append(var)
-                for i in range(len(cond)):#Check for unperma called integers, and note that, else remove the !
-                    if cond[i]in"0123456789" and cond[i-1]!="!":
-                        ro=1
-                    elif cond[i]in"0123456789" and cond[i-1]=="!":
-                        cond=cond[:i-1]+cond[i:]
-        if ro:
-            reqs.append("RTCT==1")#If theres at least one non perma int, add a only call once req
-        if line[-1]=="#":
-            reqs.append("LCT["+str(LN-1)+"]>LCT["+str(LN)+"] && LCT["+str(LN-1)+"]<RTCT")#Fancy stuff to construct the restrictions
-        for var in vaw:
-            reqs.append("CT"+str(var)+">LCT["+str(LN)+"] && CT"+str(var)+"<RTCT")
-        fwrite("if("+" && ".join(reqs)+"){\n")#Write the if statement
-        fwrite("called=1;\n")#Write termination stopping line
-        scp+=1
-        if ";" in line:#Turn the code in front into either many lines delimited by ; or just one
-            slines=line.split(";")
-        else:
-            slines=[line]
-        for sline in slines:
-            if sline[0:2]=="<>":#Check for push (<>) commands
-                v=""
-                i=2
-                while sline[i] in alfnum:
-                    v+=sline[i]
-                    i+=1
-                fwrite("CT"+v+"=RTCT;\n")
-            elif sline[0:5]=='print':#Check for print commands
-                i=6
-                v2=""
-                while sline[i] !=')':
-                    v2+=sline[i]
-                    i+=1
-                fwrite('printf('+oparse(v2)+');\n')
-            elif "<<" in sline:#Check for broadcast (<<) commands
-                v0=""
-                i=0
-                while sline[i] in alfnum:
-                    v0+=sline[i]
-                    i+=1
-                i=sline.index("<<")+2
-                while sline[i] ==" ":
-                    i+=1
-                v1=""
-                while sline[i] not in "@?#":
-                    v1+=sline[i]
-                    i+=1
-                    if i==len(sline):
-                        break
-                if v1[0:5]=='input':#input commands
-                    i=sline.index(v1)+6
-                    v2=""
-                    while sline[i] !=')':
-                        v2+=sline[i]
-                        i+=1
-                    fwrite('printf('+oparse(v2)+');scanf("%'+ctypes[v0[0]]+'",&'+v0+');\n')
-                else:#Else just assign it normally
-                    fwrite(v0+"="+v1+";\n")
-                fwrite("CT"+v0+"=RTCT;\n")
-            elif ":" in sline:#Check for assignment (:) commands
-                v0=""
-                i=0
-                while sline[i] in alfnum:
-                    v0+=sline[i]
-                    i+=1
-                i=sline.index(":")+1
-                while sline[i] ==" ":
-                    i+=1
-                v1=""
-                while sline[i] not in "@?#":
-                    v1+=sline[i]
-                    i+=1
-                    if i==len(sline):
-                        break
-                #fwrite(v0+" = "+v1+";\n")
-                if v1[0:5]=='input':#input commands
-                    i=sline.index(v1)+6
-                    v2=""
-                    while sline[i] !=')':
-                        v2+=sline[i]
-                        i+=1
-                    fwrite('printf('+oparse(v2)+');scanf("%'+ctypes[v0[0]]+'",&'+v0+');\n')
-                else:
-                    fwrite(v0+"="+v1+";\n")
-        fwrite("LCT["+str(LN)+"]=RTCT;\n")
-        scp-=1
-        fwrite("}\n")
-    scp-=1
-    #print(vars)
-    fwrite("if(!called){\n")
-    scp+=1
-    #fwrite('printf("inters: %d\n",(RTCT));\n')
-    fwrite("return 0;\n")
-    scp-=1
-    fwrite("}\n")
-    scp-=1
-    fwrite("}\n")
-    scp-=1
-    fwrite("}\n")
     
