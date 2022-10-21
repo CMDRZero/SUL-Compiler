@@ -555,8 +555,6 @@ def scopecompile(txt,params,name,out,level=0):#Compile the code at a given scope
     fwrite("}\n")
     scp-=1
     fwrite("}\n")
-    scp-=1
-    fwrite("}\n")
 
 
 #Base variables
