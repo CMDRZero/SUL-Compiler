@@ -528,7 +528,7 @@ with open("code.c","w") as f:#Output file
                     while sline[i] !=')':
                         v2+=sline[i]
                         i+=1
-                    fwrite('printf("%'+ctypes[v2[0]]+'",&'+v0+');scanf("%'+ctypes[v0[0]]+'",&'+v0+');\n')
+                    fwrite('printf('+oparse(v2)+');scanf("%'+ctypes[v0[0]]+'",&'+v0+');\n')
                 else:#Else just assign it normally
                     fwrite(v0+"="+v1+";\n")
                 fwrite("CT"+v0+"=RTCT;\n")
@@ -567,15 +567,15 @@ with open("code.c","w") as f:#Output file
         fwrite("LCT["+str(LN)+"]=RTCT;\n")
         scp-=1
         fwrite("}\n")
+        scp-=1
         
     #print(vars)
-    scp-=1
-    fwrite("}\n")
-    scp-=1
     fwrite("if(!called){\n")
     scp+=1
     #fwrite('printf("inters: %d\n",(RTCT));\n')
     fwrite("return 0;\n")
+    fwrite("}\n")
+    scp-=1
     fwrite("}\n")
     scp-=1
     fwrite("}\n")
