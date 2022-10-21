@@ -549,9 +549,9 @@ def scopecompile(txt,pars,name,out,level=0):#Compile the code at a given scope l
                     fwrite('printf('+oparse(v2)+');scanf("%'+ctypes[v0[0]]+'",&'+v0+');\n')
                 else:#Else just assign it normally
                     if v0==out:
-                        fwrite("return("+oparse(v1)+");\n")
+                        fwrite("return("+fullparse(v1)[1]+");\n")
                     else:
-                        fwrite(v0+"="+oparse(v1)+";\n")
+                        fwrite(v0+"="+fullparse(v1)[1]+";\n")
                 fwrite("CT"+v0+"=RTCT;\n")
             elif ":" in sline:#Check for assignment (:) commands
                 v0=""
@@ -577,7 +577,7 @@ def scopecompile(txt,pars,name,out,level=0):#Compile the code at a given scope l
                         i+=1
                     fwrite('printf('+oparse(v2)+');scanf("%'+ctypes[v0[0]]+'",&'+v0+');\n')
                 else:
-                    fwrite(v0+"="+oparse(v1)+";\n")
+                    fwrite(v0+"="+fullparse(v1)[1]+";\n")
         fwrite("LCT["+str(LN)+"]=RTCT;\n")
         scp-=1
         fwrite("}\n")
