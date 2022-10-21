@@ -353,13 +353,14 @@ def makesyntaxtree(tree):#For debugging, call this on a tree to get a nested bra
         return("["+dtypes[tree[0]]+" "+tree[1]+"]")
     else:
         return("["+dtypes[tree[0]]+" ["+tree[1]+" "+" ".join([makesyntaxtree(branch) for branch in tree[2:]])+"]]")
-def scopecompile(txt,params,name,out,level=0):#Compile the code at a given scope level, lvl 0 = main(), lvl 1 = func
+def scopecompile(txt,pars,name,out,level=0):#Compile the code at a given scope level, lvl 0 = main(), lvl 1 = func
     global scp
+    params=", ".join([dtypes[it[0]]+" "+it for it in pars.split(",")])
     if level==0:
         name="main"
         out="i"
-    fwrite(dtypes[out[0]]+" "+name+"("+params+"){\n")
-    scp+=1#These mean add indentation
+        params="void"
+        pars=" "
     for line in txt.split("\n"): #This checks for replacement (::) lines
         if "::" in line:
             rep,val=line.split("::")
@@ -370,6 +371,7 @@ def scopecompile(txt,params,name,out,level=0):#Compile the code at a given scope
     f=0
     sl=[]
     fname=""
+    ntxt=""
     for line in txt.split("\n"): #This checks for func defs (>>) lines
         if f==0:
             if ">>" in line:
@@ -386,13 +388,20 @@ def scopecompile(txt,params,name,out,level=0):#Compile the code at a given scope
                 while f[i] !=')':
                     par+=f[i]
                     i+=1
+            else:
+                if line!="":
+                    ntxt+=line+"\n"
         else:
             if line!="}":
                 sl.append(line)
             else:
+                
                 scopecompile("\n".join(sl),par,fname,val,level=1)
                 sl=[]
                 f=0
+    txt=ntxt[:-1]
+    fwrite(dtypes[out[0]]+" "+name+"("+params+"){\n")
+    scp+=1#These mean add indentation
     lines=txt.split("\n")
     L=len(lines)
     fwrite("unsigned long LCT["+str(L)+"];\nmemset(LCT,0,"+str(L)+"*sizeof(unsigned long));\n")#Initalize the Call time array
@@ -424,7 +433,7 @@ def scopecompile(txt,params,name,out,level=0):#Compile the code at a given scope
             if line[i]=='"':
                 q=not q
     gvars=[]
-    for p in params:
+    for p in pars.split(","):
         gvars.append((p[0],p))#Initialize global variables (just the parameters here)
     uvars=[]#Make a version of all of the variables (vars) and filter out duplicates
     for c,var in vars:
@@ -594,9 +603,9 @@ dtypes={"i":"int","u":"unsigned int","f":"float","b":"int","c":"char","Ev":"Eval
 ctypes={"i":"d","u":"i","f":"f","c":"c"}
 
 with open("code.sul","r") as f:#If you want to use a different file, change this file name
-    txt=f.read()
+    ftxt=f.read()
 scp=0
 with open("code.c","w") as f:#Output file
     fwrite("#include <stdio.h>\n#include <string.h>\n\n")#Write simple c imports and base code
-    scopecompile(txt,"void","main","i",level=0)
+    scopecompile(ftxt,"void","main","i",level=0)
     
