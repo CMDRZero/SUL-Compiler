@@ -366,40 +366,39 @@ def scopecompile(txt,pars,name,out,level=0):#Compile the code at a given scope l
             rep,val=line.split("::")
             txt=txt.replace(rep,val)
             txt=txt.replace(line.replace(rep,val)+"\n","")#Delete the replacement line afterwards
-            #print(rep,val)
-    #Find Function defs here, and remove them
-    f=0
-    sl=[]
-    fname=""
-    ntxt=""
-    for line in txt.split("\n"): #This checks for func defs (>>) lines
-        if f==0:
-            if ">>" in line:
-                f=1
-                f,val=line.split(">>")
-                val=val[:-1]
-                i=0
-                par=""
-                fname=""
-                while f[i]!="(":
-                    fname+=f[i]
+    if level==0:#Find Function defs add them and remove it
+        f=0
+        sl=[]
+        fname=""
+        ntxt=""
+        for line in txt.split("\n"): #This checks for func defs (>>) lines
+            if f==0:
+                if ">>" in line:
+                    f=1
+                    f,val=line.split(">>")
+                    val=val[:-1]
+                    i=0
+                    par=""
+                    fname=""
+                    while f[i]!="(":
+                        fname+=f[i]
+                        i+=1
                     i+=1
-                i+=1
-                while f[i] !=')':
-                    par+=f[i]
-                    i+=1
+                    while f[i] !=')':
+                        par+=f[i]
+                        i+=1
+                else:
+                    if line!="":
+                        ntxt+=line+"\n"
             else:
-                if line!="":
-                    ntxt+=line+"\n"
-        else:
-            if line!="}":
-                sl.append(line)
-            else:
-                
-                scopecompile("\n".join(sl),par,fname,val,level=1)
-                sl=[]
-                f=0
-    txt=ntxt[:-1]
+                if line!="}":
+                    sl.append(line)
+                else:
+                    
+                    scopecompile("\n".join(sl),par,fname,val,level=1)
+                    sl=[]
+                    f=0
+        txt=ntxt[:-1]
     fwrite(dtypes[out[0]]+" "+name+"("+params+"){\n")
     scp+=1#These mean add indentation
     lines=txt.split("\n")
@@ -549,7 +548,10 @@ def scopecompile(txt,pars,name,out,level=0):#Compile the code at a given scope l
                         i+=1
                     fwrite('printf('+oparse(v2)+');scanf("%'+ctypes[v0[0]]+'",&'+v0+');\n')
                 else:#Else just assign it normally
-                    fwrite(v0+"="+v1+";\n")
+                    if v0==out:
+                        fwrite("return("+oparse(v1)+");\n")
+                    else:
+                        fwrite(v0+"="+oparse(v1)+";\n")
                 fwrite("CT"+v0+"=RTCT;\n")
             elif ":" in sline:#Check for assignment (:) commands
                 v0=""
@@ -575,7 +577,7 @@ def scopecompile(txt,pars,name,out,level=0):#Compile the code at a given scope l
                         i+=1
                     fwrite('printf('+oparse(v2)+');scanf("%'+ctypes[v0[0]]+'",&'+v0+');\n')
                 else:
-                    fwrite(v0+"="+v1+";\n")
+                    fwrite(v0+"="+oparse(v1)+";\n")
         fwrite("LCT["+str(LN)+"]=RTCT;\n")
         scp-=1
         fwrite("}\n")
