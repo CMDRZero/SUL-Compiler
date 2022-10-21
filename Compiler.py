@@ -522,20 +522,13 @@ with open("code.c","w") as f:#Output file
                     i+=1
                     if i==len(sline):
                         break
-                if v1[0:7]=='input("':#input commands but badly
-                    i=sline.index(v1)+7
-                    v2=""
-                    while sline[i] !='"':
-                        v2+=sline[i]
-                        i+=1
-                    fwrite('printf("'+v2+'");scanf("%'+ctypes[v0[0]]+'",&'+v0+');\n')
-                elif v1[0:5]=='input':#input commands but worse
+                if v1[0:5]=='input':#input commands
                     i=sline.index(v1)+6
                     v2=""
                     while sline[i] !=')':
                         v2+=sline[i]
                         i+=1
-                        fwrite('printf("%'+ctypes[v2[0]]+'",&'+v0+');scanf("%'+ctypes[v0[0]]+'",&'+v0+');\n')
+                    fwrite('printf("%'+ctypes[v2[0]]+'",&'+v0+');scanf("%'+ctypes[v0[0]]+'",&'+v0+');\n')
                 else:#Else just assign it normally
                     fwrite(v0+"="+v1+";\n")
                 fwrite("CT"+v0+"=RTCT;\n")
