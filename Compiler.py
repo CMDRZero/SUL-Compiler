@@ -379,12 +379,12 @@ def scopecompile(txt,params,name,out,level=0):#Compile the code at a given scope
                 i=0
                 par=""
                 fname=""
-                while sline[i]!="(":
-                    fname+=sline[i]
+                while f[i]!="(":
+                    fname+=f[i]
                     i+=1
                 i+=1
-                while sline[i] !=')':
-                    par+=sline[i]
+                while f[i] !=')':
+                    par+=f[i]
                     i+=1
         else:
             if line!="}":
