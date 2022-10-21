@@ -760,13 +760,13 @@ with open("code.c","w") as f:#Output file
         fwrite("LCT["+str(LN)+"]=RTCT;\n")
         scp-=1
         fwrite("}\n")
-        scp-=1
-        
+    scp-=1
     #print(vars)
     fwrite("if(!called){\n")
     scp+=1
     #fwrite('printf("inters: %d\n",(RTCT));\n')
     fwrite("return 0;\n")
+    scp-=1
     fwrite("}\n")
     scp-=1
     fwrite("}\n")
