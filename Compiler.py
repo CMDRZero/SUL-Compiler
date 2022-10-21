@@ -354,6 +354,7 @@ def makesyntaxtree(tree):#For debugging, call this on a tree to get a nested bra
     else:
         return("["+dtypes[tree[0]]+" ["+tree[1]+" "+" ".join([makesyntaxtree(branch) for branch in tree[2:]])+"]]")
 def scopecompile(txt,params,name,out,level=0):#Compile the code at a given scope level, lvl 0 = main(), lvl 1 = func
+    global scp
     fwrite(dtypes[out[0]]+" "+name+"("+params+"){\n")
     scp+=1#These mean add indentation
     for line in txt.split("\n"): #This checks for replacement (::) lines
@@ -539,13 +540,13 @@ def scopecompile(txt,params,name,out,level=0):#Compile the code at a given scope
         fwrite("LCT["+str(LN)+"]=RTCT;\n")
         scp-=1
         fwrite("}\n")
-        scp-=1
-        
+    scp-=1
     #print(vars)
     fwrite("if(!called){\n")
     scp+=1
     #fwrite('printf("inters: %d\n",(RTCT));\n')
     fwrite("return 0;\n")
+    scp-=1
     fwrite("}\n")
     scp-=1
     fwrite("}\n")
