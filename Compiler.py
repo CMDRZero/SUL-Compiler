@@ -355,6 +355,9 @@ def makesyntaxtree(tree):#For debugging, call this on a tree to get a nested bra
         return("["+dtypes[tree[0]]+" ["+tree[1]+" "+" ".join([makesyntaxtree(branch) for branch in tree[2:]])+"]]")
 def scopecompile(txt,params,name,out,level=0):#Compile the code at a given scope level, lvl 0 = main(), lvl 1 = func
     global scp
+    if level==0:
+        name="main"
+        out="i"
     fwrite(dtypes[out[0]]+" "+name+"("+params+"){\n")
     scp+=1#These mean add indentation
     for line in txt.split("\n"): #This checks for replacement (::) lines
@@ -363,6 +366,7 @@ def scopecompile(txt,params,name,out,level=0):#Compile the code at a given scope
             txt=txt.replace(rep,val)
             txt=txt.replace(line.replace(rep,val)+"\n","")#Delete the replacement line afterwards
             #print(rep,val)
+    #Find Function defs here, and remove them
     lines=txt.split("\n")
     L=len(lines)
     fwrite("unsigned long LCT["+str(L)+"];\nmemset(LCT,0,"+str(L)+"*sizeof(unsigned long));\n")#Initalize the Call time array
@@ -540,12 +544,13 @@ def scopecompile(txt,params,name,out,level=0):#Compile the code at a given scope
         fwrite("LCT["+str(LN)+"]=RTCT;\n")
         scp-=1
         fwrite("}\n")
-    scp-=1
     #print(vars)
     fwrite("if(!called){\n")
     scp+=1
     #fwrite('printf("inters: %d\n",(RTCT));\n')
     fwrite("return 0;\n")
+    scp-=1
+    fwrite("}\n")
     scp-=1
     fwrite("}\n")
     scp-=1
@@ -578,7 +583,7 @@ with open("code.sul","r") as f:#If you want to use a different file, change this
 scp=0
 with open("code.c","w") as f:#Output file
     fwrite("#include <stdio.h>\n#include <string.h>\n\n")#Write simple c imports and base code
-    fwrite("int main(void) {\n")
+    #fwrite("int main(void) {\n")
     scopecompile(txt,"void","main","i",level=0)
     f.close()
     scp+=1#These mean add indentation
