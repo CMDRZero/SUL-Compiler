@@ -33,8 +33,29 @@ def smtIn(tar,hay):#smart index, check for instance of target in hay, so long as
             return(False)
 def fwrite(x):#File write, including indentation
     f.write("\n".join("\t"*scp*(xi!="")+xi for xi in x.split("\n")))
+def gsplit(txt,delim,svs):
+    s=[]
+    b=""
+    q=[]
+    for c in txt:
+        if c in q:
+            q=q[:-1]
+        else:
+            for vs in svs:
+                if c==vs[0]:
+                    q.append(vs[1])
+        if len(q)==0:
+            if c==delim:
+                s.append(b)
+                b=""
+            else:
+                b+=c
+        else:
+            b+=c
+    s.append(b)
+    return(s)
 def oparse(txt):#Parse the parameters for a print or input command
-    obs=txt.split(",")
+    obs=gsplit(txt,",",[("(",")")])
     st=""
     par=""
     for ob in obs:
@@ -54,40 +75,40 @@ def cparse(txt,sc=""):#Using order of operations, build skeleton of parse tree
     b=""
     q=0
     tc=""
-    sc=0
+    ssc=0
     for i in range(len(txt)):
         if txt[i]=="(":
             if q==0:
                 if b!="":
-                    if b[-1] in sultypes:
-                        sc=0
+                    pf=funcs[:]
+                    iv=-1
+                    while len(pf)>1:
+                        npf=[]
+                        for func in pf:
+                            if func[iv]==b[iv]:
+                                npf.append(func)
+                        pf=npf[:]
+                        if len(pf)>1:
+                            iv-=1
+                    if len(pf)==1:
+                        ssc=1
+                        tc=pf[0]
+                        b=b[:-len(tc)]
+                    elif b[-1] in sultypes:
+                        ssc=0
                         tc=b[-1]
                         b=b[:-1]
                     else:
-                        pf=funcs[:]
-                        iv=-1
-                        while len(pf)>1:
-                            npf=[]
-                            for func in pf:
-                                if func[iv]==b[iv]:
-                                    npf.append(func)
-                            pf=npf[:]
-                            if len(pf)>1:
-                                iv-=1
-                        if len(pf)==1:
-                            sc=1
-                            tc=pf[0]
-                            b=b[:iv]
-                        else:
-                            sc=0
-                            tc=""
-                    obs.append(b)
+                        ssc=0
+                        tc=""                    
+                    if b!="":
+                        obs.append(b)
                 b=""
             q+=1
         elif txt[i]==")":
             q-=1
             if q==0:
-                if sc:
+                if ssc:
                     obs.append(fparse(b,tc))
                     b=""
                 else:
@@ -346,6 +367,7 @@ def tparse(tree):#Add the types to the parse tree
         pvar=[tparse(val) for val in par]
         return(tree[:2]+pvar)
 def dparse(tree):#Unparse the tree back to c code so it may be executed. Parenthesis heavy.
+    global funcs
     if len(tree)==2:
         return([tree[0],"("+tree[1]+")"])
     else:
@@ -372,6 +394,11 @@ def dparse(tree):#Unparse the tree back to c code so it may be executed. Parenth
             par=tree[2:]
             pvar=[dparse(val) for val in par]
             return([typ,"(("+dtypes[typ]+")"+str(pvar[0][1])+")"])
+        elif tree[1] in funcs:
+            typ=tree[0]
+            par=tree[2:]
+            pvar=[dparse(val) for val in par]
+            return([typ,"("+tree[1]+"("+",".join([str(pvar[i][1]) for i in range(len(pvar))])+"))"])
 def fullparse(txt):#Call the unparsing of the fully typed parse tree
     return(dparse(tparse(cparse(txt))))
 def makesyntaxtree(tree):#For debugging, call this on a tree to get a nested bracket notation tree
@@ -548,7 +575,12 @@ def scopecompile(txt,pars,name,out,level=0):#Compile the code at a given scope l
             elif sline[0:5]=='print':#Check for print commands
                 i=6
                 v2=""
-                while sline[i] !=')':
+                q=0
+                while sline[i] !=')' or q!=0:
+                    if sline[i]=="(":
+                        q+=1
+                    elif sline[i]==")":
+                        q-=1
                     v2+=sline[i]
                     i+=1
                 fwrite('printf('+oparse(v2)+');\n')
@@ -570,7 +602,12 @@ def scopecompile(txt,pars,name,out,level=0):#Compile the code at a given scope l
                 if v1[0:5]=='input':#input commands
                     i=sline.index(v1)+6
                     v2=""
-                    while sline[i] !=')':
+                    q=0
+                    while sline[i] !=')' or q!=0:
+                        if sline[i]=="(":
+                            q+=1
+                        elif sline[i]==")":
+                            q-=1
                         v2+=sline[i]
                         i+=1
                     fwrite('printf('+oparse(v2)+');scanf("%'+ctypes[v0[0]]+'",&'+v0+');\n')
