@@ -45,28 +45,54 @@ def oparse(txt):#Parse the parameters for a print or input command
             st+="%"+ctypes[tp]
             par+=","+val
     return('"'+st+'"'+par)
+def fparse(txt,sc):#Function parsing
+    obs=txt.split(",")
+    return([sc[0],sc]+[cparse(ob) for ob in obs])
 def cparse(txt,sc=""):#Using order of operations, build skeleton of parse tree
+    global funcs
     obs=[]
     b=""
     q=0
     tc=""
+    sc=0
     for i in range(len(txt)):
         if txt[i]=="(":
             if q==0:
                 if b!="":
                     if b[-1] in sultypes:
+                        sc=0
                         tc=b[-1]
                         b=b[:-1]
                     else:
-                        tc=""
+                        pf=funcs[:]
+                        iv=-1
+                        while len(pf)>1:
+                            npf=[]
+                            for func in pf:
+                                if func[iv]==b[iv]:
+                                    npf.append(func)
+                            pf=npf[:]
+                            if len(pf)>1:
+                                iv-=1
+                        if len(pf)==1:
+                            sc=1
+                            tc=pf[0]
+                            b=b[:iv]
+                        else:
+                            sc=0
+                            tc=""
                     obs.append(b)
                 b=""
             q+=1
         elif txt[i]==")":
             q-=1
             if q==0:
-                obs.append(cparse(b,sc=tc))
-                b=""
+                if sc:
+                    obs.append(fparse(b,tc))
+                    b=""
+                else:
+                    obs.append(cparse(b,sc=tc))
+                    b=""
         else:
             b+=txt[i]
     if b!="":
@@ -354,7 +380,7 @@ def makesyntaxtree(tree):#For debugging, call this on a tree to get a nested bra
     else:
         return("["+dtypes[tree[0]]+" ["+tree[1]+" "+" ".join([makesyntaxtree(branch) for branch in tree[2:]])+"]]")
 def scopecompile(txt,pars,name,out,level=0):#Compile the code at a given scope level, lvl 0 = main(), lvl 1 = func
-    global scp
+    global scp,funcs
     params=", ".join([dtypes[it[0]]+" "+it for it in pars.split(",")])
     if level==0:
         name="main"
@@ -400,6 +426,7 @@ def scopecompile(txt,pars,name,out,level=0):#Compile the code at a given scope l
                     f=0
         txt=ntxt[:-1]
     fwrite(dtypes[out[0]]+" "+name+"("+params+"){\n")
+    funcs.append(name)
     scp+=1#These mean add indentation
     lines=txt.split("\n")
     L=len(lines)
@@ -607,6 +634,7 @@ ctypes={"i":"d","u":"i","f":"f","c":"c"}
 with open("code.sul","r") as f:#If you want to use a different file, change this file name
     ftxt=f.read()
 scp=0
+funcs=[]
 with open("code.c","w") as f:#Output file
     fwrite("#include <stdio.h>\n#include <string.h>\n\n")#Write simple c imports and base code
     scopecompile(ftxt,"void","main","i",level=0)
