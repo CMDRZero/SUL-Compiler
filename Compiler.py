@@ -104,6 +104,8 @@ def cparse(txt,sc=""):#Using order of operations, build skeleton of parse tree
                     if b!="":
                         obs.append(b)
                 b=""
+            else:
+                b+=txt[i]
             q+=1
         elif txt[i]==")":
             q-=1
@@ -114,6 +116,8 @@ def cparse(txt,sc=""):#Using order of operations, build skeleton of parse tree
                 else:
                     obs.append(cparse(b,sc=tc))
                     b=""
+            else:
+                b+=txt[i]
         else:
             b+=txt[i]
     if b!="":
@@ -356,7 +360,6 @@ def cparse(txt,sc=""):#Using order of operations, build skeleton of parse tree
     return(obs[0])
 def tparse(tree):#Add the types to the parse tree
     if tree[0]=="Ev":
-        #print(tree)
         par=tree[2:]
         pvar=[tparse(val) for val in par]
         vpar=[oval.index(val[0]) for val in pvar]
@@ -401,6 +404,11 @@ def dparse(tree):#Unparse the tree back to c code so it may be executed. Parenth
             return([typ,"("+tree[1]+"("+",".join([str(pvar[i][1]) for i in range(len(pvar))])+"))"])
 def fullparse(txt):#Call the unparsing of the fully typed parse tree
     return(dparse(tparse(cparse(txt))))
+def compparse(txt,targ=""):#Complete parsing with target typing
+    t,c=fullparse(txt)
+    if t!=targ and targ!="":
+        t,c=fullparse(targ+"("+txt+")")
+    return(c)
 def makesyntaxtree(tree):#For debugging, call this on a tree to get a nested bracket notation tree
     if len(tree)==2:
         return("["+dtypes[tree[0]]+" "+tree[1]+"]")
@@ -452,7 +460,13 @@ def scopecompile(txt,pars,name,out,level=0):#Compile the code at a given scope l
                     sl=[]
                     f=0
         txt=ntxt[:-1]
-    fwrite(dtypes[out[0]]+" "+name+"("+params+"){\n")
+    if level==0:
+        fwrite(dtypes[out[0]]+" "+name+"("+params+"){\n")
+    else:
+        if out=="":
+            fwrite("void "+name+"("+params+"){\n")
+        else:
+            fwrite(dtypes[out[0]]+" "+name+"("+params+"){\n")
     funcs.append(name)
     scp+=1#These mean add indentation
     lines=txt.split("\n")
@@ -468,7 +482,7 @@ def scopecompile(txt,pars,name,out,level=0):#Compile the code at a given scope l
             if line[i]==":" and not q:
                 vars.append((co[0],co))
                 sus=1
-            elif line[i:i+2]=="<<" and not q:
+            elif line[i:i+2]=="<<" and not q and out!="":
                 vars.append((co[0],co))
                 sus=1
             elif line[i]==";" and not q:
@@ -613,10 +627,14 @@ def scopecompile(txt,pars,name,out,level=0):#Compile the code at a given scope l
                     fwrite('printf('+oparse(v2)+');scanf("%'+ctypes[v0[0]]+'",&'+v0+');\n')
                 else:#Else just assign it normally
                     if v0==out:
-                        fwrite("return("+fullparse(v1)[1]+");\n")
+                        if out!="":
+                            fwrite("return("+compparse(v1)+");\n")
+                        else:
+                            fwrite("return;\n")
                     else:
-                        fwrite(v0+"="+fullparse(v1)[1]+";\n")
-                fwrite("CT"+v0+"=RTCT;\n")
+                        fwrite(v0+"="+compparse(v1,v0[0])+";\n")
+                if v0!="":
+                    fwrite("CT"+v0+"=RTCT;\n")
             elif ":" in sline:#Check for assignment (:) commands
                 v0=""
                 i=0
@@ -641,7 +659,31 @@ def scopecompile(txt,pars,name,out,level=0):#Compile the code at a given scope l
                         i+=1
                     fwrite('printf('+oparse(v2)+');scanf("%'+ctypes[v0[0]]+'",&'+v0+');\n')
                 else:
-                    fwrite(v0+"="+fullparse(v1)[1]+";\n")
+                    fwrite(v0+"="+compparse(v1,v0[0])+";\n")
+            else:
+                pf=funcs[:]
+                iv=0
+                while len(pf)>1:
+                    npf=[]
+                    for func in pf:
+                        if func[iv]==sline[iv]:
+                            npf.append(func)
+                    pf=npf[:]
+                    if len(pf)>1:
+                        iv+=1
+                if len(pf)==1:
+                    Fc=pf[0]
+                    i=len(Fc)+1
+                    v2=""
+                    q=0
+                    while sline[i] !=')' or q!=0:
+                        if sline[i]=="(":
+                            q+=1
+                        elif sline[i]==")":
+                            q-=1
+                        v2+=sline[i]
+                        i+=1
+                    fwrite(compparse(Fc+'('+v2+')')+';\n')
         fwrite("LCT["+str(LN)+"]=RTCT;\n")
         scp-=1
         fwrite("}\n")
@@ -671,7 +713,7 @@ ctypes={"i":"d","u":"i","f":"f","c":"c"}
 with open("code.sul","r") as f:#If you want to use a different file, change this file name
     ftxt=f.read()
 scp=0
-funcs=[]
+funcs=['null']
 with open("code.c","w") as f:#Output file
     fwrite("#include <stdio.h>\n#include <string.h>\n\n")#Write simple c imports and base code
     scopecompile(ftxt,"void","main","i",level=0)
